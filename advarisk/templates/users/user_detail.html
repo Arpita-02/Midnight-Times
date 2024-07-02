@@ -1,0 +1,177 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}User {{ object.name }}{% endblock title %}
+
+{% block content %}
+<style>
+  body {
+    background-image: url('{% static 'images/advarisk.jpeg' %}');
+    background-size: cover;
+    background-repeat: no-repeat;
+    /* Additional background properties */
+  }
+
+  /* Custom style for search results table */
+  #search-results-table {
+    background-color: white; /* Ensure table background is white */
+  }
+
+  .button-group {
+    display: flex;
+    align-items: center;
+    gap: 10px; /* Adjust the gap between buttons as needed */
+  }
+
+  .button-group .btn {
+    margin: 0;
+  }
+  
+</style>
+
+<div class="container">
+  <div class="row">
+    <div class="col-sm-12">
+      <h2>{{ object.name }}</h2>
+    </div>
+  </div>
+  {% if object == request.user %}
+  <!-- Action buttons -->
+  <div class="row">
+    <div class="col-sm-12">
+      <a class="btn btn-primary" href="{% url 'users:update' %}" role="button">My Info</a>
+      <a class="btn btn-primary" href="{% url 'account_email' %}" role="button">E-Mail</a>
+      <!-- Your Stuff: Custom user template urls -->
+    </div>
+  </div>
+
+  <div class="row mt-3">
+    <div class="col-sm-8">
+      <form id="search-form">
+        <div class="input-group mb-3">
+          <input type="text" class="form-control" placeholder="Search..." name="q" id="search-input" />
+        </div>
+        <div class="input-group mb-3">
+          <input type="text" class="form-control" placeholder="Article Language" name="article_language" id="article-language-input" />
+        </div>
+        <div class="input-group mb-3">
+          <input type="text" class="form-control" placeholder="Sources" name="sources" id="sources-input" />
+        </div>
+        <div class="button-group">
+          <button class="btn btn-outline-secondary" type="submit">Search</button>
+          <button class="btn btn-outline-secondary" type="button" id="refresh-button">Refresh</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Search Results Table -->
+  <div class="row mt-3" id="search-results-table" style="display: none; max-height: 75vh; overflow-y: auto">
+    <div class="col-sm-12">
+      <div class="table-responsive">
+        <table class="table table-striped">
+          <thead>
+            <tr>
+              <th scope="col" style="width: 20%">Author</th>
+              <th scope="col" style="width: 30%">Title</th>
+              <th scope="col" style="width: 50%">Description</th>
+              <!-- Adjust width as needed -->
+            </tr>
+          </thead>
+          <tbody id="search-results-body">
+            <!-- Results will be dynamically added here -->
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+  <!-- End Search Results Table -->
+
+  {% endif %}
+</div>
+
+<script>
+  document.getElementById("search-form").addEventListener("submit", function (e) {
+    e.preventDefault(); // Prevent the default form submission
+    var query = document.getElementById("search-input").value.trim();
+    var articleLanguage = document.getElementById("article-language-input").value.trim();
+    var sources = document.getElementById("sources-input").value.trim();
+
+    if (query !== "") {
+      performSearch(query, articleLanguage, sources);
+    }
+  });
+
+  document.getElementById("refresh-button").addEventListener("click", function () {
+    var query = document.getElementById("search-input").value.trim();
+    var articleLanguage = document.getElementById("article-language-input").value.trim();
+    var sources = document.getElementById("sources-input").value.trim();
+
+    if (query !== "") {
+      performSearch(query, articleLanguage, sources);
+    }
+  });
+
+  function performSearch(query, articleLanguage, sources) {
+    var access_token = localStorage.getItem("access_token");
+    
+    var payload = {
+      keyword: query,
+    };
+    
+    if (articleLanguage) {
+      payload.article_language = articleLanguage;
+    }
+    
+    if (sources) {
+      payload.sources = sources;
+    }
+
+    var searchResultsBody = document.getElementById("search-results-body");
+    searchResultsBody.innerHTML = ""; // Clear previous results
+
+    fetch("http://127.0.0.1:8000/newsapp/api/search/", {
+      method: "POST",
+      headers: {
+        Authorization: `token ${access_token}`,
+        "Content-Type": "application/json",
+        "X-CSRFToken": "{{ csrf_token }}",
+        Cookie:
+          "csrftoken=ND54TYes4xHL0axgFJGz2I4xIoHWjOAP; sessionid=jbudvev8nir95yeewa2dego2o41o2psg",
+      },
+      body: JSON.stringify(payload),
+    })
+      .then((response) => response.json())
+      .then((data) => {
+        // Show the table once data is fetched
+        document.getElementById("search-results-table").style.display = "block";
+
+        data.forEach((item) => {
+          var row = document.createElement("tr");
+          row.style.backgroundColor = "white"; // Set row background to white
+
+          // Author
+          var authorCell = document.createElement("td");
+          authorCell.textContent = item.author || "-";
+          row.appendChild(authorCell);
+
+          // Title
+          var titleCell = document.createElement("td");
+          titleCell.textContent = item.title || "-";
+          row.appendChild(titleCell);
+
+          // Description
+          var descriptionCell = document.createElement("td");
+          descriptionCell.innerHTML = item.description || "-";
+          row.appendChild(descriptionCell);
+
+          searchResultsBody.appendChild(row);
+        });
+      })
+      .catch((error) => {
+        console.error("Error:", error);
+        // Handle error or display error message to user
+      });
+  }
+</script>
+{% endblock content %}

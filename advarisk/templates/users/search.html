@@ -1,0 +1,8 @@
+<form id="search-form" method="GET" action="{% url 'search' %}">
+    <div class="input-group mb-3">
+      <input type="text" class="form-control" name="keyword" placeholder="Search for something..." aria-label="Search" aria-describedby="search-button">
+      <button class="btn btn-outline-primary" type="submit" id="search-button">Search</button>
+    </div>
+    <input type="hidden" id="csrf_token" name="csrfmiddlewaretoken" value="{{ csrf_token }}">
+  </form>
+  

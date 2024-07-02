@@ -1,0 +1,167 @@
+{% extends "base.html" %}
+{% load static %}
+{% load i18n %}
+
+{% block content %}
+<style>
+  body {
+    background-image: url("{% static 'images/advarisk.jpeg' %}");
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+  }
+
+  .container {
+    max-width: 600px;
+    margin: 0 auto;
+    background: rgba(255, 255, 255, 0.8); /* White background with some transparency */
+    padding: 20px;
+    border-radius: 10px;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+  }
+
+  h1 {
+    text-align: center;
+    margin-bottom: 20px;
+  }
+
+  .form-group label {
+    font-weight: bold;
+  }
+
+  .form-group input {
+    padding: 10px;
+  }
+
+  .button.secondaryAction {
+    display: inline-block;
+    margin-top: 10px;
+    color: #007bff;
+    text-decoration: none;
+  }
+
+  .button.secondaryAction:hover {
+    text-decoration: underline;
+  }
+
+  .primaryAction {
+    width: 100%;
+    padding: 10px;
+    margin-top: 20px;
+  }
+
+  .text-danger {
+    color: #dc3545;
+  }
+</style>
+
+<div class="container">
+  <div class="row">
+    <div class="col-sm-12">
+      <h1>{% translate "Sign In" %}</h1>
+    </div>
+  </div>
+
+  <div class="row mt-3">
+    <div class="col-sm-8">
+      <form id="login-form" class="login" method="post">
+        {% csrf_token %}
+        <div class="form-group" style="margin-bottom: 10px">
+          <label for="email">{% translate "Email" %}</label>
+          <input
+            type="email"
+            id="email"
+            name="email"
+            class="form-control"
+            required
+          />
+        </div>
+        <div class="form-group" style="margin-bottom: 10px">
+          <label for="password">{% translate "Password" %}</label>
+          <input
+            type="password"
+            id="password"
+            name="password"
+            class="form-control"
+            required
+          />
+        </div>
+        <a
+          class="button secondaryAction"
+          href="{% url 'account_reset_password' %}"
+          >{% translate "Forgot Password?" %}</a
+        >
+        <button
+          id="login-submit"
+          class="primaryAction btn btn-primary"
+          type="submit"
+        >
+          {% translate "Sign In" %}
+        </button>
+        <p id="error-message" class="text-danger mt-2"></p>
+      </form>
+    </div>
+  </div>
+</div>
+
+<script>
+  document
+    .getElementById("login-form")
+    .addEventListener("submit", function (e) {
+      e.preventDefault(); // Prevent the default form submission
+
+      var formData = new FormData(document.getElementById("login-form"));
+      var formObject = {};
+      formData.forEach((value, key) => {
+        formObject[key] = value;
+      });
+
+      fetch("http://127.0.0.1:8000/auth/login/", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "X-CSRFToken": getCookie("csrftoken"),
+        },
+        body: JSON.stringify(formObject),
+      })
+        .then((response) => {
+          if (!response.ok) {
+            throw new Error("Network response was not ok");
+          }
+          return response.json();
+        })
+        .then((data) => {
+          localStorage.setItem("access_token", data.key);
+          localStorage.setItem("is_superuser", data.is_superuser);
+          localStorage.setItem("id", data.id);
+          // Redirect user upon successful login
+          if (data.is_superuser) {
+            window.location.href = "http://127.0.0.1:8000/users/admin/details/";
+          } else {
+            window.location.href = `http://127.0.0.1:8000/users/${data?.id}/`;
+          }
+        })
+        .catch((error) => {
+          console.error("Error:", error);
+          document.getElementById("error-message").innerText =
+            "{% translate 'Invalid credentials. Please try again.' %}";
+        });
+    });
+
+  function getCookie(name) {
+    var cookieValue = null;
+    if (document.cookie && document.cookie !== "") {
+      var cookies = document.cookie.split(";");
+      for (var i = 0; i < cookies.length; i++) {
+        var cookie = cookies[i].trim();
+        // Does this cookie string begin with the name we want?
+        if (cookie.substring(0, name.length + 1) === name + "=") {
+          cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+          break;
+        }
+      }
+    }
+    return cookieValue;
+  }
+</script>
+{% endblock content %}
